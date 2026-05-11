@@ -239,6 +239,7 @@ exports.addCompanyDetails = async(req,res)=>{
 
         const bankAccounts = parseBankAccounts(req.body);
         const primaryBankAccount = getPrimaryBankAccount(bankAccounts);
+        console.log("REQUEST BODY => ", req.body);
 
         const companyProfile = await CompanyDetails.create(
             {

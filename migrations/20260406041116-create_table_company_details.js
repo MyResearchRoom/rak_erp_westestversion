@@ -186,7 +186,7 @@ module.exports = {
         },
 
 
-        uthorizedShareCapital: {
+        authorizedShareCapital: {
             type: Sequelize.INTEGER,
             allowNull:true,
         },
