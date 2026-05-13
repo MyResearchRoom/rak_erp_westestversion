@@ -25,7 +25,7 @@ exports.addComplianceData = async (req,res)=>{
     const transaction = await sequelize.transaction();
     try {
         const {
-            companyId,docName,docNumber,issueAuthority,issueDate,expiryDate,note,
+            companyId,docName,docNumber,financialYear,issueAuthority,issueDate,expiryDate,note,
         }= req.body;
 
         const doc = req.file ? req.file.buffer : null;
@@ -43,6 +43,7 @@ exports.addComplianceData = async (req,res)=>{
                 companyId,
                 docName,
                 docNumber: docNumber || null ,
+                financialYear: financialYear || null,
                 issueAuthority :issueAuthority || null,
                 issueDate,
                 expiryDate : expiryDate || null,
@@ -267,20 +268,12 @@ exports.editCompliance = async (req,res)=>{
     try {
         const {id}=req.params;
         const {
-            companyId,docName,docNumber,issueAuthority,issueDate,expiryDate,note,
+            companyId,docName,docNumber,financialYear,issueAuthority,issueDate,expiryDate,note,
         }= req.body;
-
-        const doc = req.file ? req.file.buffer : null;
-        const docContentType = req.file ? req.file.mimetype : null;
 
         if(!id){
             await transaction.rollback();
             return errorResponse(res, "Compliance id is required", 400);
-        }
-
-        if(!doc){
-            await transaction.rollback();
-            return errorResponse(res, "Compliance document is required.", 400);
         }
 
         const compliance = await ComplianceDocuments.findByPk(id, { transaction });
@@ -289,6 +282,9 @@ exports.editCompliance = async (req,res)=>{
             await transaction.rollback();
             return errorResponse(res, "Compliance not found", 404);
         }
+
+        const doc = req.file ? req.file.buffer : null;
+        const docContentType = req.file ? req.file.mimetype : null;
 
         const company = await Company.findByPk(companyId, { transaction });
 
@@ -301,6 +297,7 @@ exports.editCompliance = async (req,res)=>{
             "companyId",
             "docName",
             "docNumber",
+            "financialYear",
             "issueAuthority",
             "issueDate",
             "expiryDate",
@@ -316,8 +313,10 @@ exports.editCompliance = async (req,res)=>{
         }
         });
 
-        updateData.doc = doc;
-        updateData.docContentType = docContentType;
+        if (req.file) {
+            updateData.doc = doc;
+            updateData.docContentType = docContentType;
+        }
 
         const companyDoc = await CompanyDocuments.findOne({
             where:{

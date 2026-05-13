@@ -19,6 +19,7 @@ const {
 
         "qualification",
         "mobileNumber",
+        "email",
         "pan",
         "aadhaar",
 
@@ -169,6 +170,7 @@ exports.getFarmerMembers = async (req,res) =>{
             { fullName: { [Op.like]: `%${searchTerm}%` } },
             { gender: { [Op.like]: `%${searchTerm}%` } },
             { mobileNumber: { [Op.like]: `%${searchTerm}%` } },
+            { email: { [Op.like]: `%${searchTerm}%` } },
             { category: { [Op.like]: `%${searchTerm}%` } },
             { pan: { [Op.like]: `%${searchTerm}%` } },
             { aadhaar: { [Op.like]: `%${searchTerm}%` } },
@@ -412,6 +414,7 @@ exports.uploadFarmers = async (req, res) => {
             qualification: row["Educational Qualification"] || null,
 
             mobileNumber: row["Mobile number"],
+            email: row["Email"] || row["Email ID"] || row["Email Id"] || null,
             pan: row["Pan"] || null,
             aadhaar: aadhaar,
 

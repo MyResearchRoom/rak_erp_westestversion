@@ -64,15 +64,6 @@ module.exports = (sequelize, DataTypes) => {
         type:DataTypes.STRING,
         allowNull:true,
       },
-      // dsc: {
-      //   type:DataTypes.BOOLEAN,
-      //   allowNull:true,
-      // },
-
-      // dinIssued: {
-      //   type:DataTypes.BOOLEAN,
-      //   allowNull:true,
-      // },
       dinNumber: {
         type:DataTypes.STRING,
         allowNull:true,
@@ -81,11 +72,6 @@ module.exports = (sequelize, DataTypes) => {
         type:DataTypes.BOOLEAN,
         allowNull:true,
       },
-      isSanchalak:{
-        type:DataTypes.BOOLEAN,
-        allowNull:true,
-      },
-
       folioNumber:{
         type:DataTypes.STRING,
         allowNull:true,

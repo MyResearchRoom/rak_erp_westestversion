@@ -25,6 +25,10 @@ module.exports = (sequelize, DataTypes) => {
             type:DataTypes.STRING,
             allowNull:true,
         },
+        financialYear:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
         issueAuthority:{
             type:DataTypes.STRING,
             allowNull:true,

@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { jwt_secret, jwt_refresh_secret } = require("../config/config");
 
-const ACCESS_TOKEN_EXPIRY = "15m";
+const ACCESS_TOKEN_EXPIRY = "24h";
 const REFRESH_TOKEN_EXPIRY = "7d";
 
 exports.generateTokens = (user) => {
