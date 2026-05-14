@@ -376,14 +376,20 @@ exports.uploadBoardOfDirectors = async (req, res) => {
 
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-
+   
     const data = XLSX.utils.sheet_to_json(sheet);
+    console.log(data);
 
     const validRows = data.filter(
       (row) =>
         row["Full Name of BoD"] &&
         row["Mobile Number"] && row["E-mail ID"]
+
+
+        
     );
+
+    
 
     const excelEmailSet = new Set();
 
@@ -431,7 +437,10 @@ exports.uploadBoardOfDirectors = async (req, res) => {
             mobile: row["Mobile Number"],
             email:email,
             skill: row["Key Skill of this BoD"] || null,
-            dinNumber: row["If yes, provide DIN no."] || null,
+            // dinNumber: row["DIN Number"] || null,
+
+            dinNumber:row["DIN Number"] ||row["DIN Number "] || null,
+  
             farmerCert: formatBoolean(row["Farmer/ Producer Certificate collected?"]),
             folioNumber: row["Distinctive Folio Number"] || null,
 
@@ -446,7 +455,8 @@ exports.uploadBoardOfDirectors = async (req, res) => {
             capital: row["Contribution to Share Capital (Rs.)"] || null,
             shareholding: row["% Shareholding in FPC"] || null,
             land: row["Total Landholding (Acres)"] || null,
-            landRecord: row[`Land Record No. (Survey No. / Khsara No.) (If doesn't have land, mention "Landless")`] || null,
+        landRecord: row[" Land Record No. (Survey No. / Khsara No.)"] ||row["Land Record No. (Survey No. / Khsara No.)"] || null,
+  
             village: row["Name of Village where this BoD Farmer resides"] || null,
             block: row["Block"] || null,
             tehsil: row["Tehsil/ Taluka"] || null,

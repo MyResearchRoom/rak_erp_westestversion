@@ -428,7 +428,8 @@ exports.uploadFarmers = async (req, res) => {
             folioNumber: row["Distinctive Folio Number"] || null,
             shareholding: row["% Shareholding in FPC"] || null,
             landHolding: row["Total Landholding (Acres)"] || null,
-            landRecordNumber: row[`Land Record No. (Survey No. / Khsara No.) (If doesn't have land, mention "Landless")`] || null,
+            landRecordNumber:row["Land Record No.(Survey No. / Khsara No.)"] ||  row[" Land Record No. (Survey No. / Khsara No.)"] ||   row["Land Record No. (Survey No. / Khsara No.)"] || null,
+  
             village: row["Name of Village where Farmer resides"] || null,
             block: row["Block"] || null,
             tehsil: row["Tehsil/ Taluka"] || null,
