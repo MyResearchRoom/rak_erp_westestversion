@@ -1,16 +1,16 @@
-const { Company,InvoiceItems, Invoices,Materials, InvoiceCustomerDetails, sequelize} = require('../models');
+const { Company, InvoiceItems, Invoices, Materials, InvoiceCustomerDetails, sequelize } = require('../models');
 const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
 const { validateQueryParams } = require('../utils/validateQueryParams');
 const generateInvoiceNumber = require('../utils/generateInvoiceNumber');
 
 
-exports.createInvoice = async(req,res)=>{
+exports.createInvoice = async (req, res) => {
     const transaction = await sequelize.transaction();
-    try{
-        const {companyId,invoiceDate,items,customerDetails } =req.body
+    try {
+        const { companyId, invoiceDate, items, customerDetails } = req.body
 
-        if(!companyId){
+        if (!companyId) {
             await transaction.rollback();
             return errorResponse(res, "Company id is required to create invoice", 400);
         }
@@ -34,7 +34,13 @@ exports.createInvoice = async(req,res)=>{
             state,
             pincode,
             pan,
-            gstin
+            gstin,
+
+            transportationMode,
+            transportDescription,
+            placeOfSupply,
+            dateOfSupply,
+
         } = customerDetails;
 
         const company = await Company.findByPk(companyId, { transaction });
@@ -49,8 +55,8 @@ exports.createInvoice = async(req,res)=>{
         let subTotal = 0;
         let totalGST = 0;
         let totalAmount = 0;
-        let totalCGSTPercent=0;
-        let totalSGSTPercent=0;
+        let totalCGSTPercent = 0;
+        let totalSGSTPercent = 0;
 
         let invoiceItemsData = [];
 
@@ -78,8 +84,8 @@ exports.createInvoice = async(req,res)=>{
                 quantity,
                 rate,
                 subTotal: itemSubTotal,
-                cgstPercent:cgst,
-                sgstPercent:sgst,
+                cgstPercent: cgst,
+                sgstPercent: sgst,
                 totalGSTAmount: gstAmount,
                 totalAmount: itemTotal,
             });
@@ -116,28 +122,35 @@ exports.createInvoice = async(req,res)=>{
         await InvoiceItems.bulkCreate(invoiceItemsData, { transaction });
 
         await InvoiceCustomerDetails.create(
-        {
-            invoiceId: invoice.id,  
-            name,
-            phone,
-            email,
-            address,
-            city,
-            state,
-            pincode,
-            pan,
-            gstin: gstin || null, 
-        },
-        { transaction }
+            {
+                invoiceId: invoice.id,
+
+                name,
+                phone,
+                email,
+                address,
+                city,
+                state,
+                pincode,
+                pan,
+
+                gstin: gstin || null,
+
+                transportationMode,
+                transportDescription,
+                placeOfSupply,
+                dateOfSupply,
+            },
+            { transaction }
         );
 
         await transaction.commit();
 
-        return successResponse(res, "Invoice created successfully", 
+        return successResponse(res, "Invoice created successfully",
 
-    );
+        );
 
-    }catch (error) {
+    } catch (error) {
         await transaction.rollback();
         console.log(error);
         return errorResponse(res, "Failed to create invoice", 500);
@@ -145,11 +158,11 @@ exports.createInvoice = async(req,res)=>{
 
 };
 
-exports.getInvoiceList = async(req,res)=>{
-    try{
-        const { page, limit, offset ,searchTerm} = validateQueryParams({ ...req.query });
-        const { role, email,id: userId} = req.user; 
-        const {date,companyId,status}=req.query;
+exports.getInvoiceList = async (req, res) => {
+    try {
+        const { page, limit, offset, searchTerm } = validateQueryParams({ ...req.query });
+        const { role, email, id: userId } = req.user;
+        const { date, companyId, status } = req.query;
 
         const whereClause = {
             [Op.and]: [],
@@ -166,46 +179,46 @@ exports.getInvoiceList = async(req,res)=>{
         }
 
         if (role === "EMPLOYEE") {
-        const companies = await Company.findAll({
-            where: { assignEmployee: userId },
-            attributes: ["id"],
-        });
+            const companies = await Company.findAll({
+                where: { assignEmployee: userId },
+                attributes: ["id"],
+            });
 
-        if (!companies.length) {
-            return successResponse(res, "No invoices found", {
-            invoices: [],
-            pagination: {
-                totalRecords: 0,
-                totalPages: 0,
-                currentPage: page,
-                itemsPerPage: limit,
-            },
+            if (!companies.length) {
+                return successResponse(res, "No invoices found", {
+                    invoices: [],
+                    pagination: {
+                        totalRecords: 0,
+                        totalPages: 0,
+                        currentPage: page,
+                        itemsPerPage: limit,
+                    },
+                });
+            }
+
+            const companyIds = companies.map(c => c.id);
+
+            whereClause[Op.and].push({
+                companyId: { [Op.in]: companyIds },
             });
         }
 
-        const companyIds = companies.map(c => c.id);
-
-        whereClause[Op.and].push({
-            companyId: { [Op.in]: companyIds },
-        });
-        }
-
         if (searchTerm) {
-        whereClause[Op.and].push({
-            [Op.or]: [
-            { invoiceNumber: { [Op.like]: `%${searchTerm}%` } },
-            { status: { [Op.like]: `%${searchTerm}%` } },
-            { "$company.name$": { [Op.like]: `%${searchTerm}%` } },
-            ],
-        });
+            whereClause[Op.and].push({
+                [Op.or]: [
+                    { invoiceNumber: { [Op.like]: `%${searchTerm}%` } },
+                    { status: { [Op.like]: `%${searchTerm}%` } },
+                    { "$company.name$": { [Op.like]: `%${searchTerm}%` } },
+                ],
+            });
         }
 
-        if(companyId){
+        if (companyId) {
             whereClause[Op.and].push({ companyId });
         }
 
-        if(status){
-            const validStatus = ["paid", "pending", "partially paid","overdue"];
+        if (status) {
+            const validStatus = ["paid", "pending", "partially paid", "overdue"];
             if (!validStatus.includes(status)) {
                 return errorResponse(res, "Invalid status passed", 400);
             }
@@ -213,7 +226,7 @@ exports.getInvoiceList = async(req,res)=>{
             whereClause[Op.and].push({ status: status });
         }
 
-        if(date){
+        if (date) {
             whereClause[Op.and].push({ invoiceDate: date });
         }
 
@@ -234,51 +247,51 @@ exports.getInvoiceList = async(req,res)=>{
                     required: true,
                 },
             ],
-            distinct: true, 
+            distinct: true,
             offset,
             limit,
             order: [["createdAt", "DESC"]],
         });
 
         successResponse(res, "Invoices fetched successfully", {
-        invoices: rows,
-        pagination: {
-            totalRecords: count,
-            totalPages: limit ? Math.ceil(count / limit) : 1,
-            currentPage: page,
-            itemsPerPage: limit,
-        },
+            invoices: rows,
+            pagination: {
+                totalRecords: count,
+                totalPages: limit ? Math.ceil(count / limit) : 1,
+                currentPage: page,
+                itemsPerPage: limit,
+            },
         });
 
-    }catch (error) {
+    } catch (error) {
         console.log(error);
         return errorResponse(res, "Failed to fetch invoices", 500);
     }
 
 }
 
-exports.getInvoiceById = async(req,res) =>{
-    try{
-        const {id}=req.params;
+exports.getInvoiceById = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-        if(!id){
+        if (!id) {
             return errorResponse(res, "Invoice id is required to get invoice details", 400);
         }
 
         const invoice = await Invoices.findOne({
-            where: {id:id},
+            where: { id: id },
             include: [
                 {
                     model: Company,
-                    as: "company", 
+                    as: "company",
                 },
                 {
                     model: InvoiceItems,
-                    as: "invoiceItems", 
-                    include:[
+                    as: "invoiceItems",
+                    include: [
                         {
                             model: Materials,
-                            as:"material"
+                            as: "material"
                         }
                     ]
                 },
@@ -290,17 +303,17 @@ exports.getInvoiceById = async(req,res) =>{
             ],
         })
 
-        if(!invoice){
+        if (!invoice) {
             return errorResponse(res, "Invoice not found", 404);
         }
 
         let invoiceData = invoice.toJSON();
 
-        if (invoiceData.company &&invoiceData.company.logo &&invoiceData.company.logoContentType) {
+        if (invoiceData.company && invoiceData.company.logo && invoiceData.company.logoContentType) {
             const base64Image = invoiceData.company.logo.toString("base64");
             invoiceData.company.logo = `data:${invoiceData.company.logoContentType};base64,${base64Image}`;
         } else {
-            invoiceData.company.logo=null
+            invoiceData.company.logo = null
         }
 
         return successResponse(res, "Invoice fetched successfully", invoiceData);
@@ -311,26 +324,26 @@ exports.getInvoiceById = async(req,res) =>{
     }
 }
 
-exports.getInvoiceByCompanyId = async(req,res) =>{
-    try{
-        const {companyId}=req.params;
-        
-        if(!companyId){
+exports.getInvoiceByCompanyId = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+
+        if (!companyId) {
             return errorResponse(res, "Company id is required to get invoice company wise", 400);
         }
 
         const company = await Company.findByPk(companyId);
 
         if (!company) {
-        return errorResponse(res, "Company not found", 404);
+            return errorResponse(res, "Company not found", 404);
         }
 
         const invoice = await Invoices.findAll({
-            where: {companyId:companyId},
+            where: { companyId: companyId },
             include: [
                 {
                     model: Company,
-                    as: "company", 
+                    as: "company",
                 },
             ],
             order: [["createdAt", "DESC"]],
@@ -363,11 +376,11 @@ exports.getInvoiceByCompanyId = async(req,res) =>{
     }
 }
 
-exports.deleteInvoice =async (req,res) => {
-    try{
-        const {id}=req.params;
+exports.deleteInvoice = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-        if(!id){
+        if (!id) {
             return errorResponse(res, "Invoice id is required to delete invoice", 400);
         }
 
