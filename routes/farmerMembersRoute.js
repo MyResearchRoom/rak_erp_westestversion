@@ -9,7 +9,7 @@ const router = Router();
 
 router.post(
     "/add/:id", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     upload.fields([
         { name: "aadhaarCard", maxCount: 1 },
         { name: "sevenTwelve", maxCount: 1 },
@@ -40,7 +40,7 @@ router.delete(
 
 router.patch(
     "/edit/:id", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     upload.fields([
         { name: "aadhaarCard", maxCount: 1 },
         { name: "sevenTwelve", maxCount: 1 },

@@ -32,7 +32,7 @@ const upload = multer({
 ======================= */
 router.post(
   "/add/:id",
-  authenticate(["ADMIN", "EMPLOYEE"]),
+  authenticate(["ADMIN", "EMPLOYEE","COMPANY"]),
   upload.fields([
     { name: "kycDocument", maxCount: 1 },
     { name: "aadhaarCard", maxCount: 1 },
@@ -77,7 +77,7 @@ router.delete(
 ======================= */
 router.patch(
   "/edit/:id",
-  authenticate(["ADMIN", "EMPLOYEE"]),
+  authenticate(["ADMIN", "EMPLOYEE","COMPANY"]),
   upload.fields([
     { name: "kycDocument", maxCount: 1 },
     { name: "aadhaarCard", maxCount: 1 },
@@ -95,7 +95,7 @@ router.patch(
 ======================= */
 router.post(
   "/upload-BOD/:id",
-  authenticate(["ADMIN", "EMPLOYEE"]),
+  authenticate(["ADMIN", "EMPLOYEE","COMPANY"]),
   upload.single("file"),
   uploadBoardOfDirectors
 );

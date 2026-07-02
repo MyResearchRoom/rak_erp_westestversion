@@ -1,34 +1,36 @@
-const { Company,Receipts, Invoices, InvoiceCustomerDetails, sequelize} = require('../models');
+const { Company, Receipts, Invoices, InvoiceCustomerDetails, sequelize } = require('../models');
 const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
 const { validateQueryParams } = require('../utils/validateQueryParams');
 const generateReceiptNumber = require('../utils/generateReceiptNumber');
+const getFinancialYear = require("../utils/getFinancialYear");
 
-exports.createReceipt = async(req,res)=>{
+exports.createReceipt = async (req, res) => {
     const transaction = await sequelize.transaction();
-    try{
-        const { companyId,invoiceId,amount,paymentDate,paymentMethod,transactionReference }=req.body;
+    try {
+        const { companyId, invoiceId, amount, paymentDate, paymentMethod, transactionReference } = req.body;
+        const financialYear = getFinancialYear(paymentDate);
 
-        if(!companyId){
+        if (!companyId) {
             await transaction.rollback();
             return errorResponse(res, "Company id is required to generate receipt", 400);
         }
 
-        const company = await Company.findByPk(companyId,{transaction});
+        const company = await Company.findByPk(companyId, { transaction });
 
         if (!company) {
             await transaction.rollback();
             return errorResponse(res, "Company not found", 404);
         }
 
-        if(!invoiceId){
+        if (!invoiceId) {
             return errorResponse(res, "Invoice id is required to generate receipt", 400);
         }
 
-        const invoice= await  Invoices.findOne({
-            where:{
-                id:invoiceId,
-                companyId:companyId,
+        const invoice = await Invoices.findOne({
+            where: {
+                id: invoiceId,
+                companyId: companyId,
             },
             transaction,
         })
@@ -39,7 +41,7 @@ exports.createReceipt = async(req,res)=>{
         }
 
         const remaining = Number(invoice.totalRemaining);
-        const paid=Number(invoice.totalPaid);
+        const paid = Number(invoice.totalPaid);
         const payAmount = Number(amount);
 
         if (remaining === 0) {
@@ -55,23 +57,21 @@ exports.createReceipt = async(req,res)=>{
                 400
             );
         }
-        
-        const receiptNumber= await generateReceiptNumber(transaction);
 
-        const receipt = await Receipts.create(
-            {
-                receiptNumber,
-                companyId,
-                invoiceId,
-                amount:payAmount,
-                paymentDate,
-                paymentMethod,
-                transactionReference,
-            },
-            { transaction }
-        );
+        const receiptNumber = await generateReceiptNumber(transaction);
 
-        if(!receipt){
+        const receipt = await Receipts.create({
+            receiptNumber,
+            companyId,
+            invoiceId,
+            amount: payAmount,
+            paymentDate,
+            financialYear,
+            paymentMethod,
+            transactionReference,
+        }, { transaction });
+
+        if (!receipt) {
             await transaction.rollback();
             return errorResponse(res, "Receipt not created successfully..", 404);
         }
@@ -80,17 +80,17 @@ exports.createReceipt = async(req,res)=>{
         const newRemaining = remaining - payAmount;
 
         await invoice.update(
-        {
-            totalPaid: newPaid,
-            totalRemaining: newRemaining,
-            status:
-            newRemaining === 0
-                ? "paid"
-                : newPaid > 0
-                ? "partially paid"
-                : "pending",
-        },
-        { transaction }
+            {
+                totalPaid: newPaid,
+                totalRemaining: newRemaining,
+                status:
+                    newRemaining === 0
+                        ? "paid"
+                        : newPaid > 0
+                            ? "partially paid"
+                            : "pending",
+            },
+            { transaction }
         );
 
         const parsedAmount = Number(amount);
@@ -98,15 +98,15 @@ exports.createReceipt = async(req,res)=>{
         const updatedBalance = companyBalance + parsedAmount;
 
         await company.update(
-            { balence: updatedBalance }, 
-            { transaction }    
+            { balence: updatedBalance },
+            { transaction }
         );
 
         await transaction.commit();
 
         return successResponse(res, "Receipt created successfully", receipt);
 
-    }catch (error) {
+    } catch (error) {
         await transaction.rollback();
         console.log(error);
         return errorResponse(res, "Failed to create receipt", 500);
@@ -114,11 +114,16 @@ exports.createReceipt = async(req,res)=>{
 
 };
 
-exports.getReceiptsList = async(req,res)=>{
-    try{
-        const { page, limit, offset ,searchTerm} = validateQueryParams({ ...req.query });
-        const { role, email,id: userId} = req.user; 
-        const {paymentMethod,companyId,date}=req.query;
+exports.getReceiptsList = async (req, res) => {
+    try {
+        const { page, limit, offset, searchTerm } = validateQueryParams({ ...req.query });
+        const { role, email, id: userId } = req.user;
+        const {
+            paymentMethod,
+            companyId,
+            date,
+            financialYear,
+        } = req.query;
 
         const whereClause = {
             [Op.and]: [],
@@ -142,13 +147,13 @@ exports.getReceiptsList = async(req,res)=>{
 
             if (!companies.length) {
                 return successResponse(res, "No receipts found", {
-                invoices: [],
-                pagination: {
-                    totalRecords: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    itemsPerPage: limit,
-                },
+                    invoices: [],
+                    pagination: {
+                        totalRecords: 0,
+                        totalPages: 0,
+                        currentPage: page,
+                        itemsPerPage: limit,
+                    },
                 });
             }
 
@@ -159,29 +164,35 @@ exports.getReceiptsList = async(req,res)=>{
             });
         }
 
-        if(companyId){
+        if (companyId) {
             whereClause[Op.and].push({ companyId });
         }
 
-        if(paymentMethod){
-            const validPaymentMethods = ["bank transfer","upi","cheque","cash","card"];
+        if (paymentMethod) {
+            const validPaymentMethods = ["bank transfer", "upi", "cheque", "cash", "card"];
             if (!validPaymentMethods.includes(paymentMethod)) {
                 return errorResponse(res, "Invalid payment method passed", 400);
             }
             whereClause[Op.and].push({ paymentMethod: paymentMethod });
         }
 
-        if(date){
+        if (date) {
             whereClause[Op.and].push({ paymentDate: date });
+        }
+
+        if (financialYear) {
+            whereClause[Op.and].push({
+                financialYear,
+            });
         }
 
         if (searchTerm) {
             whereClause[Op.and].push({
                 [Op.or]: [
-                { receiptNumber: { [Op.like]: `%${searchTerm}%` } },
-                { paymentMethod: { [Op.like]: `%${searchTerm}%` } },
-                { "$company.name$": { [Op.like]: `%${searchTerm}%` } },
-                { "$invoice.invoiceNumber$": { [Op.like]: `%${searchTerm}%` } },
+                    { receiptNumber: { [Op.like]: `%${searchTerm}%` } },
+                    { paymentMethod: { [Op.like]: `%${searchTerm}%` } },
+                    { "$company.name$": { [Op.like]: `%${searchTerm}%` } },
+                    { "$invoice.invoiceNumber$": { [Op.like]: `%${searchTerm}%` } },
                 ],
             });
         }
@@ -202,7 +213,7 @@ exports.getReceiptsList = async(req,res)=>{
                     as: "invoice",
                     attributes: ["id", "invoiceNumber"],
                     required: true,
-                    include:[
+                    include: [
                         {
                             model: InvoiceCustomerDetails,
                             as: "customer",
@@ -211,50 +222,50 @@ exports.getReceiptsList = async(req,res)=>{
                     ]
                 }
             ],
-            distinct: true, 
+            distinct: true,
             offset,
             limit,
             order: [["createdAt", "DESC"]],
         });
 
         successResponse(res, "Receipts fetched successfully", {
-        receipts: rows,
-        pagination: {
-            totalRecords: count,
-            totalPages: limit ? Math.ceil(count / limit) : 1,
-            currentPage: page,
-            itemsPerPage: limit,
-        },
+            receipts: rows,
+            pagination: {
+                totalRecords: count,
+                totalPages: limit ? Math.ceil(count / limit) : 1,
+                currentPage: page,
+                itemsPerPage: limit,
+            },
         });
 
-    }catch (error) {
+    } catch (error) {
         console.log(error);
         return errorResponse(res, "Failed to fetch receipts", 500);
     }
 
 }
 
-exports.getReceiptById = async(req,res) =>{
-    try{
-        const {id}=req.params;
+exports.getReceiptById = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-        if(!id){
+        if (!id) {
             return errorResponse(res, "Receipt id is required to get invoice details", 400);
         }
 
         const receipt = await Receipts.findOne({
-            where: {id:id},
+            where: { id: id },
             include: [
                 {
                     model: Company,
-                    as: "company", 
+                    as: "company",
                     required: true,
                 },
                 {
                     model: Invoices,
-                    as: "invoice", 
+                    as: "invoice",
                     required: true,
-                    include:[
+                    include: [
                         {
                             model: InvoiceCustomerDetails,
                             as: "customer",
@@ -265,7 +276,7 @@ exports.getReceiptById = async(req,res) =>{
             ],
         })
 
-        if(!receipt){
+        if (!receipt) {
             return errorResponse(res, "Receipt not found", 404);
         }
 
@@ -275,7 +286,7 @@ exports.getReceiptById = async(req,res) =>{
             const base64Image = receiptData.company.logo.toString("base64");
             receiptData.company.logo = `data:${receiptData.company.logoContentType};base64,${base64Image}`;
         } else {
-            receiptData.company.logo=null
+            receiptData.company.logo = null
         }
 
 
@@ -287,12 +298,12 @@ exports.getReceiptById = async(req,res) =>{
     }
 }
 
-exports.deleteReceipts =async (req,res) => {
+exports.deleteReceipts = async (req, res) => {
     const transaction = await sequelize.transaction();
-    try{
-        const {id}=req.params;
+    try {
+        const { id } = req.params;
 
-        if(!id){
+        if (!id) {
             await transaction.rollback();
             return errorResponse(res, "receipt id is required to delete", 400);
         }
@@ -314,7 +325,7 @@ exports.deleteReceipts =async (req,res) => {
         }
 
 
-        const amount=Number(receipt.amount);
+        const amount = Number(receipt.amount);
 
         const currentPaid = Number(invoice.totalPaid);
         const currentRemaining = Number(invoice.totalRemaining);
@@ -327,11 +338,11 @@ exports.deleteReceipts =async (req,res) => {
                 totalPaid: newPaid,
                 totalRemaining: newRemaining,
                 status:
-                newPaid === 0
-                    ? "pending"
-                    : newRemaining === 0
-                    ? "paid"
-                    : "partially paid",
+                    newPaid === 0
+                        ? "pending"
+                        : newRemaining === 0
+                            ? "paid"
+                            : "partially paid",
             },
             { transaction }
         );

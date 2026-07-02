@@ -383,13 +383,8 @@ exports.uploadBoardOfDirectors = async (req, res) => {
     const validRows = data.filter(
       (row) =>
         row["Full Name of BoD"] &&
-        row["Mobile Number"] && row["E-mail ID"]
-
-
-        
+        row["Mobile Number"] && row["E-mail ID"]    
     );
-
-    
 
     const excelEmailSet = new Set();
 
@@ -399,8 +394,7 @@ exports.uploadBoardOfDirectors = async (req, res) => {
 
     validRows.forEach((row) => {
         const email = row["E-mail ID"]?.toString().trim().toLowerCase();
-        console.log("Email",email);
-        
+        // console.log("Email",email);
 
         if (!email) return;
 
@@ -415,7 +409,6 @@ exports.uploadBoardOfDirectors = async (req, res) => {
             duplicateInDB++;
             return;
         }
-
 
         mappedData.push({
             companyId: id,
@@ -455,7 +448,7 @@ exports.uploadBoardOfDirectors = async (req, res) => {
             capital: row["Contribution to Share Capital (Rs.)"] || null,
             shareholding: row["% Shareholding in FPC"] || null,
             land: row["Total Landholding (Acres)"] || null,
-        landRecord: row[" Land Record No. (Survey No. / Khsara No.)"] ||row["Land Record No. (Survey No. / Khsara No.)"] || null,
+            landRecord: row[" Land Record No. (Survey No. / Khsara No.)"] ||row["Land Record No. (Survey No. / Khsara No.)"] || null,
   
             village: row["Name of Village where this BoD Farmer resides"] || null,
             block: row["Block"] || null,

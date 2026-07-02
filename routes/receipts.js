@@ -7,7 +7,7 @@ const router = Router();
 
 router.post(
     "/add", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE", "COMPANY"]),
     addReceiptValidation,
     validateRequest,
     createReceipt,

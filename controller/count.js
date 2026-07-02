@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { Op, where } = require('sequelize');
 const { Company,User,Receipts, Invoices,Materials,BoardOfDirectors,FarmerMembers,Expenses, ExpenseCategories,ComplianceDocuments, sequelize} = require('../models');
 const { errorResponse, successResponse } = require('../utils/response');
 
@@ -64,7 +64,9 @@ exports.getCount = async (req, res) => {
     const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
 
 
-    const totalCompanies = await Company.count();
+    const totalCompanies = await Company.count({
+        where: { ...companyWhere }
+  });
 
     const totalInvoices = await Invoices.count({ where: whereCondition });
 
@@ -101,19 +103,19 @@ exports.getCount = async (req, res) => {
     const lastReceiptPaymentDate = lastReceipt?.paymentDate || null;
 
     const totalExpenses = await Expenses.count({ where: whereCondition });
-    const totalExpensesCategory = await ExpenseCategories.count();
+    const totalExpensesCategory = await ExpenseCategories.count({where: whereCondition});
     const totalPendingExpeses = await Expenses.count({
         where: { ...whereCondition, status: "pending" }
     });
 
     const totalExpensePerMonth = await Expenses.sum("amount", {
-    where: {
-        ...whereCondition,
-        date: {
-            [Op.gte]: startOfMonth,
-            [Op.lt]: nextMonth,
+        where: {
+            ...whereCondition,
+            date: {
+                [Op.gte]: startOfMonth,
+                [Op.lt]: nextMonth,
+            },
         },
-    },
     });
 
     //account 

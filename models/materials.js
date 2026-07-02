@@ -8,14 +8,23 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "materialId",
         as: "invoice",
       });
+      Materials.belongsTo(models.Company, {
+        foreignKey: "companyId",
+        as: "company",
+      });
     }
   }
 
   Materials.init(
     {
+      
       itemName: {
         type:DataTypes.STRING,
         allowNull:false,
+      },
+      companyId: {
+        type:DataTypes.INTEGER,
+        allowNull:true,
       },
 
       hsnCode: {

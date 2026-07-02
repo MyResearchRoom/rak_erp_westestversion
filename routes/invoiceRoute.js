@@ -8,7 +8,7 @@ const router = Router();
 
 router.post(
     "/add", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     createInvoiceValidation,
     validateRequest,
     createInvoice,
@@ -35,7 +35,7 @@ router.get(
 
 router.delete(
     "/delete/:id",
-    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
+    authenticate(["ADMIN","EMPLOYEE"]),
     deleteInvoice,
 )
 

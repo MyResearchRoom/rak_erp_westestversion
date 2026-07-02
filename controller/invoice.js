@@ -3,12 +3,14 @@ const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
 const { validateQueryParams } = require('../utils/validateQueryParams');
 const generateInvoiceNumber = require('../utils/generateInvoiceNumber');
+const getFinancialYear = require("../utils/getFinancialYear");
 
 
 exports.createInvoice = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { companyId, invoiceDate, items, customerDetails } = req.body
+        const { companyId, invoiceDate, items, customerDetails, supplyTransportDetails } = req.body
+        const financialYear = getFinancialYear(invoiceDate);
 
         if (!companyId) {
             await transaction.rollback();
@@ -36,12 +38,20 @@ exports.createInvoice = async (req, res) => {
             pan,
             gstin,
 
+        } = customerDetails;
+
+        const {
             transportationMode,
             transportDescription,
             placeOfSupply,
             dateOfSupply,
+        } = supplyTransportDetails;
 
-        } = customerDetails;
+        console.log(transportationMode,
+            transportDescription,
+            placeOfSupply,
+            dateOfSupply,);
+
 
         const company = await Company.findByPk(companyId, { transaction });
 
@@ -97,22 +107,20 @@ exports.createInvoice = async (req, res) => {
 
         const overDueDate = overDueDateObj.toISOString().split("T")[0];
 
-        const invoice = await Invoices.create(
-            {
-                invoiceNumber,
-                companyId,
-                invoiceDate,
-                overDueDate,
-                subTotal,
-                totalCGSTPercent,
-                totalSGSTPercent,
-                totalGSTAmount: totalGST,
-                totalAmount,
-                totalPaid: 0,
-                totalRemaining: totalAmount,
-            },
-            { transaction }
-        );
+        const invoice = await Invoices.create({
+            invoiceNumber,
+            companyId,
+            invoiceDate,
+            financialYear,
+            overDueDate,
+            subTotal,
+            totalCGSTPercent,
+            totalSGSTPercent,
+            totalGSTAmount: totalGST,
+            totalAmount,
+            totalPaid: 0,
+            totalRemaining: totalAmount,
+        }, { transaction });
 
         invoiceItemsData = invoiceItemsData.map((item) => ({
             ...item,
@@ -136,10 +144,10 @@ exports.createInvoice = async (req, res) => {
 
                 gstin: gstin || null,
 
-                transportationMode,
-                transportDescription,
-                placeOfSupply,
-                dateOfSupply,
+                transportationMode: transportationMode || null,
+                transportDescription: transportDescription || null,
+                placeOfSupply: placeOfSupply || null,
+                dateOfSupply: dateOfSupply || null,
             },
             { transaction }
         );
@@ -162,7 +170,12 @@ exports.getInvoiceList = async (req, res) => {
     try {
         const { page, limit, offset, searchTerm } = validateQueryParams({ ...req.query });
         const { role, email, id: userId } = req.user;
-        const { date, companyId, status } = req.query;
+        const {
+            date,
+            companyId,
+            status,
+            financialYear,
+        } = req.query;
 
         const whereClause = {
             [Op.and]: [],
@@ -229,6 +242,11 @@ exports.getInvoiceList = async (req, res) => {
         if (date) {
             whereClause[Op.and].push({ invoiceDate: date });
         }
+
+        if(financialYear) {
+            whereClause[Op.and].push({financialYear:financialYear});
+        }
+
 
         const finalWhere = whereClause[Op.and].length > 0 ? whereClause : {};
 

@@ -6,28 +6,55 @@ const { validateQueryParams } = require('../utils/validateQueryParams');
 exports.addCategory = async(req,res)=>{
 try{
     
-    const {name,description}=req.body;
+    const {companyId,name,description}=req.body;
+    const { role, email, id: userId } = req.user;
+
+     if(!companyId ){
+        return errorResponse(res, "Company id is required", 400);
+    }
+
+    const company = await Company.findByPk(companyId);
+
+    if (!company) {
+        return errorResponse(res, "Company not found", 404);
+    }
 
     if(!name){
         return errorResponse(res, "Expense category name is reequired", 400);
     }
 
+    if (role === "COMPANY") {
+        const companyByLogin = await Company.findOne({ where: { email } });
+            
+
+        if (!companyByLogin) {
+            return errorResponse(res, "Company not found", 404);
+        }
+
+        if (Number(companyId) !== companyByLogin.id) {
+            return errorResponse(res, `You are not belongs to ${company.name} company`, 404);
+        }
+
+    }
+
     const existingCategory = await ExpenseCategories.findOne({
       where: {
         name: {
-          [Op.like]: name.toLowerCase()
+          [Op.like]: name.toLowerCase(),
         },
+        companyId,
       },
     });
 
     if (existingCategory) {
-        return errorResponse(res, "Category with this name already exists", 400);
+        return errorResponse(res, "Category with this name for provided company already exists", 400);
     }
     
     const category = await ExpenseCategories.create(
         {
             name,
-            description
+            companyId,
+            description,
         },
     );
 
@@ -46,6 +73,9 @@ try{
 exports.getCategoriesList = async(req,res)=>{
     try{
         const { page, limit, offset ,searchTerm} = validateQueryParams({ ...req.query });
+        const{companyId}=req.query;
+
+        const { role, email, id: userId } = req.user;
 
         let whereClause = {};
 
@@ -56,8 +86,31 @@ exports.getCategoriesList = async(req,res)=>{
         ];
         }
 
+        if(companyId){
+            whereClause.companyId=companyId;
+        }
+
+        if (role === "COMPANY") {
+            const company = await Company.findOne({ where: { email } });
+            
+
+            if (!company) {
+                return errorResponse(res, "Company not found", 404);
+            }
+
+            whereClause.companyId=company.id;
+        }
+
         const {count,rows} =await  ExpenseCategories.findAndCountAll({
             where: whereClause,
+            include: [
+                {
+                    model: Company,
+                    as: "company",
+                    attributes: ["id", "name"],
+                    required: true,
+                },
+            ],
             offset,
             limit,
             order: [["createdAt", "DESC"]],

@@ -88,9 +88,8 @@ exports.login = async (req, res) => {
             });
 
     }catch (err) {
-        console.log(err);
-        
-    errorResponse(res, err.message, err.statusCode || 500);
+      console.log(err);
+      errorResponse(res, err.message, err.statusCode || 500);
   }
 };
 

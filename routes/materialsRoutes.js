@@ -8,7 +8,7 @@ const router = Router();
 
 router.post(
     "/add", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     addMaterialValidation,
     validateRequest,
     addMaterials,
@@ -16,19 +16,19 @@ router.post(
 
 router.get(
     "/materialList",
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     getMaterialsList,
 );
 
 router.get(
     "/:id",
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     getMaterialById,
 );
 
 router.patch(
     "/edit/:id",
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     editMaterialValidation,
     validateRequest,
     editMaterial,
