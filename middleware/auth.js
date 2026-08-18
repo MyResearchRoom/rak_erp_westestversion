@@ -29,7 +29,7 @@ exports.authenticate = (roles = []) => {
       }
 
       if (roles.length > 0 && !roles.includes(user.role)) {
-        return errorResponse(res, "Unauthrized request.", 403);
+        return errorResponse(res, "Unauthorized request.", 403);
       }
 
       req.user = user;

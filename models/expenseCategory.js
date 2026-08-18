@@ -7,6 +7,10 @@ module.exports = (sequelize) => {
             foreignKey: "categoryId",
             as: "expenses",
         });
+        ExpenseCategories.belongsTo(models.Company, {
+          foreignKey: "companyId",
+          as: "company",
+        });
     }
   }
 
@@ -15,7 +19,11 @@ module.exports = (sequelize) => {
       name: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
+      },
+
+      companyId: {
+        type:DataTypes.INTEGER,
+        allowNull:true,
       },
 
       description: {

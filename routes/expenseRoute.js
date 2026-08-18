@@ -9,7 +9,7 @@ const router = Router();
 
 router.post(
     "/add", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE",,"COMPANY"]),
     upload.single("receipt"),
     validateCreateExpense,
     validateRequest,
@@ -30,7 +30,7 @@ router.get(
 
 router.delete(
     "/delete/:id",
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     deleteExpense,
 );
 

@@ -10,9 +10,12 @@ const formatRole = (value) => {
 
 const formatGender = (value) => {
   if (!value) return null;
+
   value = value.toLowerCase().trim();
-  if (value.includes("male")) return "male";
-  if (value.includes("female")) return "female";
+
+  if (value === "male") return "male";
+  if (value === "female") return "female";
+
   return "other";
 };
 
@@ -70,10 +73,20 @@ const formatBoolean = (value) => {
   return null;
 };
 
+const formateText = (value) =>{
+  if (value === undefined || value === null) return null;
+
+  if( value=== "-") return null;
+
+  return value;
+
+};
+
 module.exports = {
   formatGender,
   formatCategory,
   formatDate,
   formatRole,
   formatBoolean,
+  formateText,
 };

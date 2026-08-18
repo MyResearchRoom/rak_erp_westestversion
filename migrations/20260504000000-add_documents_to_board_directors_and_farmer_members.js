@@ -61,7 +61,7 @@ module.exports = {
       allowNull: true,
     });
     await queryInterface.addColumn('farmer_members', 'panCard', {
-      type: Sequelize.STRING,
+      type: Sequelize.BLOB("long"),
       allowNull: true,
     });
     await queryInterface.addColumn('farmer_members', 'panCardContentType', {

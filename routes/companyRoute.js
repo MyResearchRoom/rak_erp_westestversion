@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const { validateRequest } = require("../middleware/validate");
 const { authenticate } = require("../middleware/auth");
-const { createCompany, getcompanyList, getCompanyById, editCompany, deleteCompany, changeStatusOfCompany } = require("../controller/company");
+const { createCompany, getcompanyList, getCompanyDropdownList, getCompanyById, editCompany, deleteCompany, changeStatusOfCompany } = require("../controller/company");
 const {upload} = require("../middleware/upload");
 const { companyRegistrationValidation, companyEditValidation } = require("../validation/companyValidations");
 
@@ -9,7 +9,7 @@ const router = Router();
 
 router.post(
     "/add", 
-    authenticate(["ADMIN"]),
+    authenticate(["ADMIN","EMPLOYEE"]),
     upload.single("logo"),
     companyRegistrationValidation, 
     validateRequest, 
@@ -23,8 +23,14 @@ router.get(
 )
 
 router.get(
+    "/company-dropdown-list",
+    authenticate(["ADMIN","EMPLOYEE", "COMPANY"]),
+    getCompanyDropdownList,
+)
+
+router.get(
     "/:id",
-    authenticate(["ADMIN","EMPLOYEE",,"COMPANY"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     getCompanyById,
 )
 

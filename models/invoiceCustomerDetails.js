@@ -54,6 +54,25 @@ module.exports = (sequelize, DataTypes) => {
         type:DataTypes.STRING,
         allowNull:false,
       },
+      transportationMode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      transportDescription: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      placeOfSupply: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      dateOfSupply: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
 
     },
     {

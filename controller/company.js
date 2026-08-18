@@ -1,4 +1,4 @@
-const { Company,User,sequelize} = require('../models');
+const { Company, User, sequelize } = require('../models');
 const bcrypt = require("bcryptjs");
 const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
@@ -117,120 +117,145 @@ exports.createCompany = async (req, res) => {
   }
 };
 
-exports.getcompanyList = async(req,res)=>{
-    try{
-        const { page, limit, offset ,searchTerm} = validateQueryParams({ ...req.query });
-        const { status, employeeId , companyType} = req.query;
-        const { role, id} = req.user; 
+exports.getcompanyList = async (req, res) => {
+  try {
+    const { page, limit, offset, searchTerm } = validateQueryParams({ ...req.query });
+    const { status, employeeId, companyType } = req.query;
+    const { role, id } = req.user;
 
-        let whereClause = {};
+    let whereClause = {};
 
-        if (role === "EMPLOYEE") {
-          whereClause.assignEmployee=id;
-        }
-
-        if (searchTerm) {
-        whereClause[Op.or] = [
-            { name: { [Op.like]: `%${searchTerm}%` } },
-            { gstin: { [Op.like]: `%${searchTerm}%` } },
-            { pan: { [Op.like]: `%${searchTerm}%` } },
-        ];
-        }
-
-        if(status){
-            whereClause.status=status;
-        }
-
-        if(employeeId){
-            whereClause.assignEmployee=employeeId;
-        }
-        
-        if(companyType){
-            whereClause.companyType=companyType;
-        }
-
-        const {count,rows} =await  Company.findAndCountAll({
-            where: whereClause,
-            include:[
-                {
-                    model: User,
-                    as: "assignEmployeeData",
-                    attributes: ["id", "name", "email"],
-                },
-            ],
-            offset,
-            limit,
-            order: [["createdAt", "DESC"]],
-        })
-
-        const companiesWithLogo = rows.map((company) => {
-            const data = company.toJSON();
-
-            if (data.logo) {
-                const base64 = data.logo.toString("base64");
-
-                data.logo = `data:${data.logoContentType};base64,${base64}`;
-            } else {
-                data.logo = null;
-            }
-
-            return data;
-        });
-
-        successResponse(res, "Companies fetched successfully", {
-        companies: companiesWithLogo,
-        pagination: {
-            totalRecords: count,
-            totalPages: Math.ceil(count / limit),
-            currentPage: page,
-            itemsPerPage: limit,
-        },
-        });
-    } catch (error) {
-        console.log(error);
-        return errorResponse(res, "Failed to fetch companies", 500);
+    if (role === "EMPLOYEE") {
+      whereClause.assignEmployee = id;
     }
+
+    if (searchTerm) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchTerm}%` } },
+        { gstin: { [Op.like]: `%${searchTerm}%` } },
+        { pan: { [Op.like]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    if (employeeId) {
+      whereClause.assignEmployee = employeeId;
+    }
+
+    if (companyType) {
+      whereClause.companyType = companyType;
+    }
+
+    const { count, rows } = await Company.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: "assignEmployeeData",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+    })
+
+    const companiesWithLogo = rows.map((company) => {
+      const data = company.toJSON();
+
+      if (data.logo) {
+        const base64 = data.logo.toString("base64");
+
+        data.logo = `data:${data.logoContentType};base64,${base64}`;
+      } else {
+        data.logo = null;
+      }
+
+      return data;
+    });
+
+    successResponse(res, "Companies fetched successfully", {
+      companies: companiesWithLogo,
+      pagination: {
+        totalRecords: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        itemsPerPage: limit,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return errorResponse(res, "Failed to fetch companies", 500);
+  }
 
 };
 
-exports.getCompanyById = async (req,res)=>{
-    try{
-        const {id}=req.params;
+exports.getCompanyDropdownList = async (req, res) => {
+  try {
+    const { role, id } = req.user;
 
-        if(!id){
-            return errorResponse(res, "Company id is required", 400);
-        }
+    const whereClause = {};
 
-        const company = await Company.findByPk(id, {
-            include: [
-                {
-                model: User,
-                as: "assignEmployeeData",
-                attributes: ["id", "name", "email"],
-                },
-            ],
-        });
-
-        if(!company){
-            return errorResponse(res, "Company not found", 404);
-        }
-
-        const data = company.toJSON();
-
-        if (data.logo) {
-            const base64 = data.logo.toString("base64");
-            data.logo = `data:${data.logoContentType};base64,${base64}`;
-        } else {
-            data.logo = null;
-        }
-
-        return successResponse(res, "Company data fetched successfully", data);
-
-
-    } catch (error) {
-        console.log(error);
-        return errorResponse(res, "Failed to fetch company", 500);
+    if (role === "EMPLOYEE") {
+      whereClause.assignEmployee = id;
     }
+
+    const companies = await Company.findAll({
+      where: whereClause,
+      attributes: ["id", "name"],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return successResponse(res, "Companies fetched successfully", {
+      companies,
+    });
+  } catch (error) {
+    console.log(error);
+    return errorResponse(res, "Failed to fetch companies", 500);
+  }
+};
+
+exports.getCompanyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return errorResponse(res, "Company id is required", 400);
+    }
+
+    const company = await Company.scope(null).findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "assignEmployeeData",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+    });
+
+    if (!company) {
+      return errorResponse(res, "Company not found", 404);
+    }
+
+    const data = company.toJSON();
+
+    if (data.logo) {
+      const base64 = data.logo.toString("base64");
+      data.logo = `data:${data.logoContentType};base64,${base64}`;
+    } else {
+      data.logo = null;
+    }
+
+    return successResponse(res, "Company data fetched successfully", data);
+
+
+  } catch (error) {
+    console.log(error);
+    return errorResponse(res, "Failed to fetch company", 500);
+  }
 };
 
 exports.editCompany = async (req, res) => {
@@ -277,6 +302,11 @@ exports.editCompany = async (req, res) => {
       }
     });
 
+    // Handle password update
+    if (req.body.password) {
+      updateData.password = await bcrypt.hash(req.body.password, 10);
+    }
+
     if (updateData.gstin) updateData.gstin = updateData.gstin.toUpperCase();
     if (updateData.pan) updateData.pan = updateData.pan.toUpperCase();
 
@@ -313,6 +343,11 @@ exports.editCompany = async (req, res) => {
       await user.save({ transaction });
     }
 
+    if (user && updateData.password) {
+      user.password = updateData.password;
+      await user.save({ transaction });
+    }
+
     await transaction.commit();
 
     return successResponse(res, "Company updated successfully", company);
@@ -324,28 +359,28 @@ exports.editCompany = async (req, res) => {
   }
 };
 
-exports.deleteCompany =async (req,res) => {
-    try{
-        const {id}=req.params;
+exports.deleteCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        if(!id){
-            return errorResponse(res, "Company id is required", 400);
-        }
-
-        const company = await Company.findByPk(id);
-
-        if (!company) {
-            return errorResponse(res, "Company not found", 404);
-        }
-
-        await company.destroy();
-
-        return successResponse(res, "Company deleted successfully");
-
-    } catch (error) {
-        console.log(error);
-        return errorResponse(res, "Failed to delete company", 500);
+    if (!id) {
+      return errorResponse(res, "Company id is required", 400);
     }
+
+    const company = await Company.findByPk(id);
+
+    if (!company) {
+      return errorResponse(res, "Company not found", 404);
+    }
+
+    await company.destroy();
+
+    return successResponse(res, "Company deleted successfully");
+
+  } catch (error) {
+    console.log(error);
+    return errorResponse(res, "Failed to delete company", 500);
+  }
 };
 
 exports.changeStatusOfCompany = async (req, res) => {

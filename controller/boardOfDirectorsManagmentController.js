@@ -2,7 +2,7 @@ const { Company,BoardOfDirectors, sequelize} = require('../models');
 const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
 const { validateQueryParams } = require('../utils/validateQueryParams');
-const { formatGender, formatCategory, formatDate, formatRole, formatBoolean } = require('../utils/excelHelper');
+const { formatGender, formatCategory, formatDate, formatRole, formatBoolean,formateText } = require('../utils/excelHelper');
 const XLSX = require("xlsx");
 
 const boardOfDirectorFields = [
@@ -378,17 +378,14 @@ exports.uploadBoardOfDirectors = async (req, res) => {
     const sheet = workbook.Sheets[sheetName];
    
     const data = XLSX.utils.sheet_to_json(sheet);
-    console.log(data);
+    // console.log(data);
 
     const validRows = data.filter(
       (row) =>
         row["Full Name of BoD"] &&
-        row["Mobile Number"] && row["E-mail ID"]
-
-
-        
+        row["Mobile Number"] && row["E-mail ID"]    
     );
-
+    // console.log("validRows",validRows);
     
 
     const excelEmailSet = new Set();
@@ -399,13 +396,13 @@ exports.uploadBoardOfDirectors = async (req, res) => {
 
     validRows.forEach((row) => {
         const email = row["E-mail ID"]?.toString().trim().toLowerCase();
-        console.log("Email",email);
-        
+        // console.log("Email",email);
 
         if (!email) return;
 
         if (excelEmailSet.has(email)) {
             duplicateInExcel++;
+            // console.log("duplicateInExcel",row);
             return;
         }
 
@@ -413,9 +410,9 @@ exports.uploadBoardOfDirectors = async (req, res) => {
 
         if (existingEmailSet.has(email)) {
             duplicateInDB++;
+            // console.log("existingEmailSet",row);
             return;
         }
-
 
         mappedData.push({
             companyId: id,
@@ -426,46 +423,49 @@ exports.uploadBoardOfDirectors = async (req, res) => {
             ),
 
             fullName: row["Full Name of BoD"]?.trim(),
-            age: row["Age (in Years)"] || null,
+            age: formateText(row["Age (in Years)"] ),
 
             gender: formatGender(row["Gender (Male/ Female)"]),
             category: formatCategory(row["Social Category (Gen/ OBC/ SC/ ST)"]),
 
-            qualification: row["Educational Qualification"] || null,
+            qualification: formateText(row["Educational Qualification"]),
             background: formatBoolean(row["Does this BoD have B.Sc. Agri or B.Sc. Chemistry background?"]),
 
-            mobile: row["Mobile Number"],
+            mobile: formateText(row["Mobile Number"]),
             email:email,
-            skill: row["Key Skill of this BoD"] || null,
+            skill: formateText(row["Key Skill of this BoD"]),
             // dinNumber: row["DIN Number"] || null,
 
-            dinNumber:row["DIN Number"] ||row["DIN Number "] || null,
+            dinNumber:formateText(row["DIN Number"] ||row["DIN Number "]),
   
             farmerCert: formatBoolean(row["Farmer/ Producer Certificate collected?"]),
-            folioNumber: row["Distinctive Folio Number"] || null,
+            folioNumber: formateText(row["Distinctive Folio Number"]),
 
-            pan: row["PAN"] || null,
-            aadhaar: row["Aadhaar no. (if available) (DDDD DDDD DDDD)"] || null,
+            pan: formateText(row["PAN"]),
+            aadhaar: formateText(row["Aadhaar no. (if available) (DDDD DDDD DDDD)"]),
 
             shareDate: formatDate(
                 row["Date of Share Capital Contribution / Date of Membership (DD/MM/YYYY)"]
             ),
-            faceValue: row["Face value of each share (in Rs.)"] || null,
-            shares: row["No. of Shares Allotted (Nos.)"] || null,
-            capital: row["Contribution to Share Capital (Rs.)"] || null,
-            shareholding: row["% Shareholding in FPC"] || null,
-            land: row["Total Landholding (Acres)"] || null,
-        landRecord: row[" Land Record No. (Survey No. / Khsara No.)"] ||row["Land Record No. (Survey No. / Khsara No.)"] || null,
+            faceValue: formateText(row["Face value of each share (in Rs.)"]),
+            shares: formateText(row["No. of Shares Allotted (Nos.)"]),
+            capital: formateText(row["Contribution to Share Capital (Rs.)"] ),
+            shareholding: formateText(row["% Shareholding in FPC"] ),
+            land: formateText(row["Total Landholding (Acres)"]),
+            landRecord: formateText(row[" Land Record No. (Survey No. / Khsara No.)"] ||row["Land Record No. (Survey No. / Khsara No.)"] ),
   
-            village: row["Name of Village where this BoD Farmer resides"] || null,
-            block: row["Block"] || null,
-            tehsil: row["Tehsil/ Taluka"] || null,
-            district: row["District"] || null,
-            state: row["State"] || null,
-            pincode: row["PIN Code"] || null,
+            village: formateText(row["Name of Village where this BoD Farmer resides"]),
+            block: formateText(row["Block"]),
+            tehsil: formateText(row["Tehsil/ Taluka"] ),
+            district: formateText(row["District"] ),
+            state: formateText(row["State"] ),
+            pincode: formateText(row["PIN Code"]),
 
         });
     });
+
+    // console.log("mappedData",mappedData);
+    
 
     await BoardOfDirectors.bulkCreate(mappedData, { 
         transaction,

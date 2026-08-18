@@ -8,8 +8,7 @@ exports.getAccountDetails = async(req,res)=>{
     try{
         const { page, limit ,searchTerm} = validateQueryParams({ ...req.query });
         const { role, email,id: userId} = req.user; 
-        const {companyId,fromDate,toDate,type}=req.query;
-        // console.log(req.query);
+        const {companyId,type,financialYear,date}=req.query;
         
 
         const whereClause = {
@@ -86,31 +85,21 @@ exports.getAccountDetails = async(req,res)=>{
         });
         }
 
-        if (fromDate && toDate) {
-            expenseWhere[Op.and].push({
-                date: { [Op.between]: [fromDate, toDate] },
+        if (date) {
+            receiptWhere[Op.and].push({
+                paymentDate: date,
             });
-        } else if (fromDate) {
             expenseWhere[Op.and].push({
-                date: { [Op.gte]: fromDate },
-            });
-        } else if (toDate) {
-            expenseWhere[Op.and].push({
-                date: { [Op.lte]: toDate },
+                date: date,
             });
         }
 
-        if (fromDate && toDate) {
+        if (financialYear) {
             receiptWhere[Op.and].push({
-                paymentDate: { [Op.between]: [fromDate, toDate] },
+                financialYear: financialYear,
             });
-        } else if (fromDate) {
-            receiptWhere[Op.and].push({
-                paymentDate: { [Op.gte]: fromDate },
-            });
-        } else if (toDate) {
-            receiptWhere[Op.and].push({
-                paymentDate: { [Op.lte]: toDate },
+            expenseWhere[Op.and].push({
+                financialYear: financialYear,
             });
         }
 
@@ -124,7 +113,7 @@ exports.getAccountDetails = async(req,res)=>{
                 {
                     model: Company,
                     as: "company",
-                    attributes: ["id", "name", "balence"],
+                    attributes: ["id", "name","logo","logoContentType","status","connectedDate","gstin","gstin","pan","companyType","balence"],
                     required: true
                 },
                 ],
@@ -141,6 +130,16 @@ exports.getAccountDetails = async(req,res)=>{
                 balance: item.company?.balence,
                 reference: item.reference || "-",
                 type: "expense", 
+                name: item.company?.name,
+                logo:  item.company?.logo ?
+                    `data:${item.company.logoContentType};base64,${item.company.logo.toString("base64")}`
+                    : null,
+                
+                status:  item.company?.status,
+                connectedDate:  item.company?.connectedDate,
+                gstin:  item.company?.gstin,
+                pan:  item.company?.pan,
+                companyType:  item.company?.companyType,
             }));
         }
 
@@ -151,7 +150,7 @@ exports.getAccountDetails = async(req,res)=>{
                     {
                         model: Company,
                         as: "company",
-                        attributes: ["id", "name", "balence"],
+                        attributes: ["id", "name","logo","logoContentType","status","connectedDate","gstin","gstin","pan","companyType","balence"],
                         required: true,
                     },
                     {
@@ -174,6 +173,15 @@ exports.getAccountDetails = async(req,res)=>{
                 balance: item.company?.balence,
                 reference: item.reference || "-",
                 type: "receipt", 
+                name: item.company?.name,
+                logo:  item.company?.logo ?
+                    `data:${item.company.logoContentType};base64,${item.company.logo.toString("base64")}`
+                    : null,
+                status:  item.company?.status,
+                connectedDate:  item.company?.connectedDate,
+                gstin:  item.company?.gstin,
+                pan:  item.company?.pan,
+                companyType:  item.company?.companyType,
             }));
         }
 
@@ -183,20 +191,16 @@ exports.getAccountDetails = async(req,res)=>{
 
         const totalRecords = combined.length;
 
-        // const totalPages = Math.ceil(totalRecords / limit);
-        // const offset = (page - 1) * limit;
-        // const paginatedData = combined.slice(offset, offset + Number(limit));
-
         let paginatedData = [];
         let totalPages = 1;
 
         if (!limit) {
-        paginatedData = combined;
-        totalPages = 1;
+            paginatedData = combined;
+            totalPages = 1;
         } else {
-        const offset = (page - 1) * limit;
-        totalPages = Math.ceil(totalRecords / limit);
-        paginatedData = combined.slice(offset, offset + Number(limit));
+            const offset = (page - 1) * limit;
+            totalPages = Math.ceil(totalRecords / limit);
+            paginatedData = combined.slice(offset, offset + Number(limit));
         }
 
         const totalDebit = combined.reduce((sum, item) => {

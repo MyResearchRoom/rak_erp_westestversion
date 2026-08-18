@@ -1,4 +1,4 @@
-const { Materials, sequelize} = require('../models');
+const { Materials,Company, sequelize} = require('../models');
 const { errorResponse, successResponse } = require('../utils/response');
 const { Op, where } = require('sequelize');
 const { validateQueryParams } = require('../utils/validateQueryParams');
@@ -6,27 +6,54 @@ const { validateQueryParams } = require('../utils/validateQueryParams');
 exports.addMaterials = async(req,res)=>{
 try{
     
-    const {itemName, hsnCode, unit, gstRate, price}=req.body;
-    console.log("req.body",req.body);
-    
+    const {companyId,itemName, hsnCode, unit, gstRate, price}=req.body;
+    // console.log("req.body",req.body);
+    const { role, email, id: userId } = req.user;
+
+    if(!companyId ){
+        return errorResponse(res, "Company id is required", 400);
+    }
 
     if(!itemName || !hsnCode || !unit || !gstRate || !price ){
-        return errorResponse(res, "ProvidE all required data", 400);
+        return errorResponse(res, "Provide all material required data", 400);
     }
+
+    const company = await Company.findByPk(companyId);
+
+    if (!company) {
+        return errorResponse(res, "Company not found", 404);
+    }
+
+    if (role === "COMPANY") {
+        const companyByLogin = await Company.findOne({ where: { email } });
+            
+
+        if (!companyByLogin) {
+            return errorResponse(res, "Company not found", 404);
+        }
+
+        if (Number(companyId) !== companyByLogin.id) {
+            return errorResponse(res, `You are not belongs to ${company.name} company`, 404);
+        }
+
+    }
+
     const existingMaterials = await Materials.findOne({
         where: {
-            itemName: req.body.itemName,
+            itemName,
+            companyId,
         },
     });
 
     if (existingMaterials) {
-        return errorResponse(res, "Material with this name already exists", 400);
+        return errorResponse(res, "Material with this name for provided company already exists", 400);
     }
     
     
     const material = await Materials.create(
         {
             itemName, 
+            companyId,
             hsnCode, 
             unit, 
             gstRate, 
@@ -49,9 +76,16 @@ try{
 exports.getMaterialsList = async(req,res)=>{
     try{
         const { page, limit, offset ,searchTerm} = validateQueryParams({ ...req.query });
-        const{unit,gstRate}=req.query;
+        const{unit,gstRate,companyId}=req.query;
 
-        let whereClause = {};
+        // console.log(unit,gstRate,companyId);
+        
+
+        const { role, email, id: userId } = req.user;
+
+        const whereClause = {
+            [Op.and]: [],
+        };
 
         if (searchTerm) {
         whereClause[Op.or] = [
@@ -70,12 +104,68 @@ exports.getMaterialsList = async(req,res)=>{
             whereClause.gstRate=gstRate;
         }
 
+        if(companyId){
+            whereClause.companyId=companyId;
+        }
+
+        if (role === "COMPANY") {
+            const company = await Company.findOne({ where: { email } });
+            // console.log("company",company);
+            
+
+            if (!company) {
+                return errorResponse(res, "Company not found", 404);
+            }
+
+            whereClause.companyId=company.id;
+        }
+
+        if (role === "EMPLOYEE") {
+            const companies = await Company.findAll({
+                where: { assignEmployee: userId },
+                attributes: ["id"],
+            });
+
+            console.log("companies",companies);
+            
+
+            if (!companies.length) {
+                return successResponse(res, "No Materials found", {
+                    materials: [],
+                    pagination: {
+                        totalRecords: 0,
+                        totalPages: 0,
+                        currentPage: page,
+                        itemsPerPage: limit,
+                    },
+                });
+            }
+
+            const companyIds = companies.map(c => c.id);
+
+            whereClause[Op.and].push({
+                companyId: { [Op.in]: companyIds },
+            });
+        }
+
          const {count,rows} =await  Materials.findAndCountAll({
             where: whereClause,
+            include: [
+                {
+                    model: Company,
+                    as: "company",
+                    attributes: ["id", "name"],
+                    required: true,
+                },
+            ],
             offset,
             limit,
             order: [["createdAt", "DESC"]],
         })
+
+
+        // console.log(rows.JSON());
+        
 
         successResponse(res, "Materials fetched successfully", {
         materials: rows,

@@ -8,6 +8,7 @@ const {
   formatGender,
   formatCategory,
   formatDate,
+  formateText,
 } = require("../utils/excelHelper");
 
 
@@ -372,11 +373,14 @@ exports.uploadFarmers = async (req, res) => {
 
     const data = XLSX.utils.sheet_to_json(sheet);
 
+
     const validRows = data.filter(
       (row) =>
         row["Name of Shareholder Farmer"] &&
         row["Mobile number"] && row["Aadhaar no. (DDDD DDDD DDDD)"]
     );
+    console.log("valid rows",validRows.length);
+    
 
     const excelAadhaarSet = new Set();
 
@@ -406,39 +410,42 @@ exports.uploadFarmers = async (req, res) => {
             companyId: id,
 
             fullName: row["Name of Shareholder Farmer"]?.trim(),
-            age: row["Age (in Years)"] || null,
+            age: formateText(row["Age (in Years)"]),
 
             gender: formatGender(row["Gender (Male/ Female)"]),
             category: formatCategory(row["Social Category (Gen/ OBC/ SC/ ST)"]),
 
-            qualification: row["Educational Qualification"] || null,
+            qualification: formateText(row["Educational Qualification"]),
 
             mobileNumber: row["Mobile number"],
-            email: row["Email"] || row["Email ID"] || row["Email Id"] || null,
-            pan: row["Pan"] || null,
+            email: formateText(row["Email"] || row["Email ID"] || row["Email Id"] ),
+            pan: formateText(row["Pan"] ),
             aadhaar: aadhaar,
 
             shareDate: formatDate(
                 row["Date of Share Capital Contribution / Date of Membership (DD/MM/YYYY)"]
             ),
-            faceValue: row["Face value of each share (in Rs.)"] || null,
-            noOfShareAlloted: row["No. of Shares Allotted (Nos.)"] || null,
-            shareConstribution: row["Contribution to Share Capital (Rs.)"] || null,
+            faceValue: formateText(row["Face value of each share (in Rs.)"] ),
+            noOfShareAlloted: formateText(row["No. of Shares Allotted (Nos.)"]),
+            shareConstribution: formateText(row["Contribution to Share Capital (Rs.)"] ),
 
-            folioNumber: row["Distinctive Folio Number"] || null,
-            shareholding: row["% Shareholding in FPC"] || null,
-            landHolding: row["Total Landholding (Acres)"] || null,
-            landRecordNumber:row["Land Record No.(Survey No. / Khsara No.)"] ||  row[" Land Record No. (Survey No. / Khsara No.)"] ||   row["Land Record No. (Survey No. / Khsara No.)"] || null,
+            folioNumber: formateText(row["Distinctive Folio Number"] ),
+            shareholding: formateText(row["% Shareholding in FPC"]),
+            landHolding: formateText(row["Total Landholding (Acres)"]),
+            landRecordNumber: formateText(row["Land Record No.(Survey No. / Khsara No.)"] ||  row[" Land Record No. (Survey No. / Khsara No.)"] ||   row["Land Record No. (Survey No. / Khsara No.)"] ),
   
-            village: row["Name of Village where Farmer resides"] || null,
-            block: row["Block"] || null,
-            tehsil: row["Tehsil/ Taluka"] || null,
-            district: row["District"] || null,
-            state: row["State"] || null,
-            pincode: row["PIN Code"] || null,
+            village: formateText(row["Name of Village where Farmer resides"] ),
+            block: formateText(row["Block"]),
+            tehsil: formateText(row["Tehsil/ Taluka"]),
+            district: formateText(row["District"] ),
+            state: formateText(row["State"] ),
+            pincode: formateText(row["PIN Code"] ),
 
         });
     });
+    console.log("mapped rowscount",mappedData.length);
+    console.log("mapped rows",mappedData);
+
 
     await FarmerMembers.bulkCreate(mappedData, { 
         transaction,

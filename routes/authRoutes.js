@@ -11,7 +11,7 @@ router.post("/refresh-token", refreshToken);
 router.post("/logout", logout);
 router.patch(
     "/changePassword",
-    authenticate(["ADMIN"]),
+    authenticate(["ADMIN","COMPANY","EMPLOYEE"]),
     chnagePasswordValidations,
     validateRequest,
     changePassword,

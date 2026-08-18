@@ -8,7 +8,7 @@ const router = Router();
 
 router.post(
     "/add/:id", 
-    authenticate(["ADMIN","EMPLOYEE"]),
+    authenticate(["ADMIN","EMPLOYEE","COMPANY"]),
     upload.array("documents"),
     addCompanyDetails,
 );
